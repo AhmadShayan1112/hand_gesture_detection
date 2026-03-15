@@ -59,47 +59,99 @@ To use the API from a frontend application (like React or Next.js), you need to 
 *   **Digits Prediction**: `POST /digit`
 *   **English Alphabet Prediction**: `POST /english_alphabet`
 
-### Example Frontend Code (JavaScript/React)
+### Example Frontend Code (Live Camera in Flutter & React Native)
 
-Here is a simple `fetch` request showing how to call the endpoint using a standard Image File or Blob:
+When integrating with mobile apps (Flutter or React Native) for real-time inference, you need to capture frames from the live camera and send them to the API using a multipart `POST` request. 
 
-```javascript
-// Function to upload a hand gesture image to the API
-async function predictGesture(imageBlob, type = 'english_alphabet') {
-    // Determine the endpoint URL based on type
-    const endpoint = type === 'digit' 
-        ? 'http://localhost:8080/digit' 
-        : 'http://localhost:8080/english_alphabet';
+#### 1. Flutter Example (using `camera` and `http` packages)
 
-    // Prepare form data
-    const formData = new FormData();
-    // Assuming 'imageBlob' is a Blob, File, or an image captured from a canvas
-    formData.append('image', imageBlob, 'capture.jpg'); 
+```dart
+import 'package:camera/camera.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
-    try {
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            body: formData,
-            // Note: Don't set 'Content-Type' manually when using FormData
-        });
+bool isProcessing = false;
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+// Call this inside your CameraController's startImageStream callback
+Future<void> processCameraFrame(CameraImage image, String type) async {
+  if (isProcessing) return; // Prevent overlapping requests
+  isProcessing = true;
 
-        const result = await response.json();
-        console.log("Predicted Class:", result.prediction_class);
-        console.log("Confidence:", result.confidence);
-        
-        return result; // Example: { prediction_class: "A", confidence: 0.98 }
-    } catch (error) {
-        console.error("Error predicting gesture:", error);
+  try {
+    // 1. Convert CameraImage (YUV420/BGRA8888) to JPEG bytes. 
+    // Note: You will need a helper function to convert 'image' to JPEG bytes.
+    // For example, using the 'image' package to encode to Jpg.
+    List<int> jpegBytes = await convertCameraImageToJpeg(image);
+
+    var uri = Uri.parse("http://<YOUR_LOCAL_IP>:8080/$type");
+    var request = http.MultipartRequest('POST', uri);
+    
+    request.files.add(http.MultipartFile.fromBytes(
+      'image', 
+      jpegBytes,
+      filename: 'frame.jpg'
+    ));
+
+    var response = await request.send();
+    if (response.statusCode == 200) {
+      var responseData = await response.stream.bytesToString();
+      var result = json.decode(responseData);
+      print("Predicted: \${result['prediction_class']} (Confidence: \${result['confidence']})");
     }
+  } catch (e) {
+    print("Error processing frame: $e");
+  } finally {
+    isProcessing = false;
+  }
 }
 ```
 
-### Capturing Frames from a Webcam (Frontend)
-If you're using a webcam in the browser, a common approach is:
-1.  Draw the ` <video> ` frame to a ` <canvas> ` element.
-2.  Convert the canvas to a Blob using `canvas.toBlob(...)`.
-3.  Pass that Blob into the `predictGesture` function shown above.
+#### 2. React Native Example (using `react-native-vision-camera` and `fetch`)
+
+```javascript
+import { useFrameProcessor } from 'react-native-vision-camera';
+import { runOnJS } from 'react-native-reanimated';
+
+let isProcessing = false;
+
+const sendFrameToAPI = async (base64Image, type = 'english_alphabet') => {
+  if (isProcessing) return;
+  isProcessing = true;
+
+  try {
+    const endpoint = `http://<YOUR_LOCAL_IP>:8080/${type}`;
+    const formData = new FormData();
+    
+    // Convert base64 back to a file object for multipart/form-data
+    formData.append('image', {
+      uri: `data:image/jpeg;base64,\${base64Image}`,
+      type: 'image/jpeg',
+      name: 'frame.jpg',
+    });
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      body: formData,
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    const result = await response.json();
+    console.log(`Predicted: \${result.prediction_class} (\${result.confidence})`);
+  } catch (error) {
+    console.error("Frame processing error:", error);
+  } finally {
+    isProcessing = false;
+  }
+};
+
+// Inside your component
+const frameProcessor = useFrameProcessor((frame) => {
+  'worklet';
+  // Note: react-native-vision-camera requires a frame processor plugin 
+  // to convert the frame to base64. 
+  // Assuming 'frameToBase64' is your custom C++/Objective-C/Java plugin:
+  const base64Image = frameToBase64(frame); 
+  
+  runOnJS(sendFrameToAPI)(base64Image);
+}, []);
+```
