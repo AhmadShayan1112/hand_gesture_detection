@@ -39,17 +39,39 @@ python inference_english.py
 
 ## 3. Creating and Expanding the Dataset
 
-You can use the inference scripts to collect new data and expand your custom datasets. 
+You can use the native inference scripts to collect new data and expand your custom datasets. 
 
-Here is how data collection works (using `inference_english.py` as an example):
+Across all scripts, the **Logging Modes** are generally triggered by these keys:
+*   `k`: Enter **Logging Key Point** mode (Saves to `keypoint.csv`).
+*   `h`: Enter **Logging Point History** mode.
+*   `n`: Return to **Normal** mode (Stops logging).
 
-1.  Run the inference script: `python inference_english.py`.
-2.  **Enter Logging Mode**: Press the `k` key on your keyboard. The mode text on the screen will change to `MODE: Logging Key Point`.
-3.  **Log Data**: Make a hand gesture in front of the camera. While making the gesture, press a number key `0-9` that corresponds to the class label you want to assign to that gesture.
-4.  **Saved Data**: The script will instantly extract the normalized hand landmark coordinates and append them, along with the label number, to the corresponding CSV file (e.g., `model/New_english_dataset/keypoint.csv`).
-5.  **Return to Normal**: To stop logging, press `n`.
+While in a Logging Mode, you hold the gesture in front of the camera and press specific keyboard keys to capture the frame. Each script maps different keyboard keys to specific dataset labels:
 
-*(Note: If you are logging Point History gestures, press `h` to enter "Logging Point History" mode).*
+### 1. English Alphabet (`inference_english.py`)
+*   **Purpose:** Appends to `model/New_english_dataset/keypoint.csv`.
+*   **Keys to press for labels:**
+    *   `1`-`9`: Maps to Labels **1** through **9**.
+    *   `0`: Maps to Label **10**.
+
+### 2. Digits (`inference_digit.py`)
+*   **Purpose:** Appends to `model/keypoint_classifier/keypoint.csv`.
+*   **Keys to press for labels:**
+    *   `1`-`9`: Maps to Labels **1** through **9**.
+    *   `0`: Maps to Label **10**.
+
+### 3. Urdu Alphabet (`inference_urdu.py`)
+*   **Purpose:** Appends to the Urdu dataset.
+*   **Keys to press for labels:**
+    *   `0`-`9`: Maps directly to labels `0` through `9`.
+    *   `a`-`e`: Maps to labels `10` through `14`.
+
+### 4. Greetings (`inference_greeting.py`)
+*   **Purpose:** Appends to `model/Greeting_keypoint/keypoint.csv`
+*   **Keys to press for labels:**
+    *   `z`: Enters logging mode specifically for this script.
+    *   `n`: Returns to normal mode.
+    *   The script uses an internal `KEY_TO_LABEL` mapping (e.g., specific letters typed on the keyboard) to assign the correct gesture class. Check the script's `KEY_TO_LABEL` dictionary for the exact mapping assigned for different greetings.
 
 ## 4. Frontend Integration
 
