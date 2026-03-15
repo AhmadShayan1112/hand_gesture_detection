@@ -1,0 +1,8 @@
+opencv-python==4.10.0.84 --> is for import cv2
+fastapi==0.128.0 --> is for import fastapi
+mediapipe==0.10.9 --> is for import mediapipe
+numpy==2.0.2 --> is for import numpy
+tensorflow==2.19.0 --> is for import tensorflow
+tqdm==4.67.1 --> is for import tqdm
+uvicorn==0.39.0 --> is for import uvicorn
+python-multipart==0.0.20 --> is required for fastapi UploadFile
